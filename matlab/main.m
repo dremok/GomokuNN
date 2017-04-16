@@ -4,7 +4,7 @@ board   = zeros(n,n);
 [f w]   = getFeatures;      % features for computing phi(s,a)
 epsilon = 0.1;              % for epsilon-greedy strategy
 
-%% rollout:
+%%
 
 wAll = w';
 
@@ -19,9 +19,10 @@ D.boardNext = NaN(N,n*n);
 D.moveNext  = NaN(N,2);
 D.n         = 0;
 
-%% roll
+%%
 
 for kk = 1:100
+    %% rollout
     fprintf('Rollout %d ..'); tic
     [states moves rewards] = rollOut(w,f,epsilon);
     toc
@@ -51,11 +52,10 @@ for kk = 1:100
     D.boardNext(ii,:)   = sNext(jj,1:end-1);
     D.moveNext(ii,:)    = aNext(jj,:);
     
-    %% do some learning
+    %% stochastic gradient descent
     
     mini_batch_size = 50;
-    
-    fprintf('Minibatch (1)'); tic
+    fprintf('Minibatch '); tic
     for mb = 1:5
         fprintf('%d',mb)
         ii = randi(D.n,mini_batch_size,1);
