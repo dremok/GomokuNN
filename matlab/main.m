@@ -1,5 +1,6 @@
 
-board   = zeros(13,13);
+n = 13;
+board   = zeros(n,n);
 [f w]   = getFeatures;      % features for computing phi(s,a)
 epsilon = 0.1;              % for epsilon-greedy strategy
 
