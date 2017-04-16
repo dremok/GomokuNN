@@ -29,6 +29,38 @@ if s(a(1),a(2)) == 0
     end
 end
 
+%% testing phi:
+% 
+% board = [0  0  1  1  0  0  0  0  0  0  0  0  0
+%          0  1  0  0  0  0  0  0  0  0  0  0  0
+%          0  0  0  0  0  0  0  0  0  0  0  0  0
+%          0  0  0  0  0  0  0  0  0  0  0  0  0
+%          0  0  0  0  0 -1  0  0  0  0  0  0  0
+%          0  0  0  0  0 -1  0  0  0  0  0  0  0
+%          0  0  0  0  0  0  0  0  0 -1  0  0  0
+%          0  0  0  0  0  0  0  1 -1  0  0  0  0
+%          0  0  0  0  0  0  0 -1  1  0  0  0  0
+%          0  0  0  0  0  0  0  0  0  1  0  0  0
+%          0  0  0  0  0  0  0  0  0  0  0  0  0
+%          0  0  0  0  0  0  0  0  0  0  0  0  0
+%          0  0  0  0  0  0  0  0  0  0  0  0  0];
+% 
+% player = 1;
+% a = [2 3];
+% 
+% clc
+% fprintf('board after move (%d,%d) for player %d:\n',a(1),a(2),player);
+% board_ = board;
+% board_(a(1),a(2)) = player;
+% disp(board_)  
+% 
+% phi_ = phi(board,[2 3],player,f);
+% jj = find(phi_);
+% for j = 1:numel(jj)
+%     fprintf('%d matches for this feature:\n',phi_(jj(j)))
+%     disp(f{jj(j)})
+% end
+
 %% Old version of phi which looked only around a
 % function phi_ = phi(s,a,player,features)
 % 
