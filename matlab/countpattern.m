@@ -4,9 +4,9 @@ function c = countpattern(b, p, f)
 % p: player 
 % f: features
 
-c = NaN(size(f,1),1);
-for j = 1:size(f,1)
-    c(j) = countpat(b*p,f{j});
+c = zeros(f.group(end),1);
+for j = 1:size(f.pattern,1)
+    c(f.group(j)) = c(f.group(j)) + countpat(b*p,f.pattern{j});
 end
 
 %% Test it:
@@ -29,6 +29,7 @@ end
 % c = countpattern(board,player,f);
 % jj = find(c);
 % for j = 1:numel(jj)
-%     fprintf('%d matches for this feature:\n',c(jj(j)))
-%     disp(f{jj(j)})
+%     k = find(f.group == jj(j),1);
+%     fprintf('%d matches for this feature (modulo symmetries):\n',c(jj(j)))
+%     disp(f.pattern{k})
 % end

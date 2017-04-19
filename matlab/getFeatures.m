@@ -1,4 +1,4 @@
-function [f_all w_all f_group] = getFeatures
+function [f w] = getFeatures
 
 LR  = @fliplr;
 UD  = @flipud;
@@ -6,18 +6,19 @@ UD  = @flipud;
 % the features are encoded from the point of view of player == 1
 f_generators = {
 % "good for me":
-[0 1 1 0],     0.01
-[0 1 1 1 0],   0.1
-[0 1 1 1 1 0], 0.5
-[0 1 0 1 1 0], 0.5
-[1 1 1 1 1],   1
+[0 1 1 0],      0.1360
+[0 1 1 1 0],    0.2662
+[0 1 1 1 1 0],  0.9232
+[0 1 0 1 1 0],  0.1967
+[1 1 1 1 1],    1.5843
 % "bad for me":
-[0 -1 -1 0],       -0.02
-[0 -1 -1 -1 0],    -0.7
-[0 -1 -1 -1 -1 0], -0.9
-[-1 -1 0 -1 -1], -0.9
-[-1 -1 -1 0 -1], -0.9
-[1 -1 -1 -1 -1 0], -0.7
+[0 -1 -1 0],        -0.1594
+[0 -1 -1 -1 0],     -0.6747
+[0 -1 -1 -1 -1 0],  -1.3054
+[0 -1 -1 0 -1 0],   -1.3054
+[-1 -1 0 -1 -1],    -0.7254
+[-1 -1 -1 0 -1],    -0.5805
+[1 -1 -1 -1 -1 0],  -1.1453
 };
 
 w = cell2mat(f_generators(:,2));
@@ -89,4 +90,16 @@ for j = 1:size(f_all,1)
     f_all{j,2} = 10.^f_.*(f_ ~= 4);
     
     f_all{j,3} = f_all{j,2}(:)'*f_(:);
+end
+
+%% output
+
+clear f
+f.pattern = f_all;
+f.group   = f_group;
+
+w = NaN(max(f.group),1);
+for j = 1:max(f.group)
+    k = find(f.group == j,1);
+    w(j) = w_all(k);
 end

@@ -1,7 +1,7 @@
 
 n = 13;
 board   = zeros(n,n);
-[f w f_group]   = getFeatures;      % features for computing phi(s,a)
+[f w]   = getFeatures;      % features for computing phi(s,a)
 epsilon = 0.1;              % for epsilon-greedy strategy
 
 % ADAM pars (https://arxiv.org/pdf/1412.6980.pdf):
@@ -95,15 +95,8 @@ for kk = 1:100000
         adam.v = adam.b2*adam.v + (1 - adam.b2)*dLdw.^2;
         mHat = adam.m / (1 - adam.b1^adam.n);
         vHat = adam.v / (1 - adam.b2^adam.n);
-%         w = w - adam.a * mHat ./ (sqrt(vHat) + adam.eps);
         w = w + 0.001 * mHat ./ (sqrt(vHat) + adam.eps);
         
-        for mm = 1:max(f_group)
-           jj = f_group == mm;
-           w(jj) = mean(w(jj));
-        end
-        
-%         w = w + 0.2*dLdw;
         wAll(end+1,:) = w;
         LAll(end + 1) = L;
     end
