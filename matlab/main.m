@@ -1,56 +1,53 @@
 
 n = 13;
 board   = zeros(n,n);
-[f w]   = getFeatures;      % features for computing phi(s,a)
+[f w f_group]   = getFeatures;      % features for computing phi(s,a)
 epsilon = 0.1;              % for epsilon-greedy strategy
+
+% ADAM pars (https://arxiv.org/pdf/1412.6980.pdf):
+adam.a = 0.001;
+adam.b1 = 0.9;
+adam.b2 = 0.999;
+adam.eps = 1e-8;
+adam.n   = 0;
+adam.m   = zeros(size(w));
+adam.v   = zeros(size(w));
 
 %%
 
 wAll = w';
 
 % initialise experience memory: 
-N = 10000;
+N = 100000;
 clear D
-D.board     = NaN(N,n*n);
-D.player    = NaN(N,1);
-D.move      = NaN(N,2);
-D.reward    = NaN(N,1);
-D.boardNext = NaN(N,n*n);
-D.moveNext  = NaN(N,2);
-D.n         = 0;
+D.s      = NaN(N,n*n + 1);
+D.a      = NaN(N,2);
+D.r      = NaN(N,1);
+D.sNext  = NaN(N,n*n + 1);
+D.n      = 0;
 
 %%
 
-for kk = 1:100
+for kk = 1:100000
     %% rollout
     fprintf('Rollout %d ..'); tic
-    [states moves rewards] = rollOut(w,f,epsilon);
+    [ss as rs isRandom] = rollOut(w,f,epsilon);
     toc
     
     %% add experience to D
     
-    s     = [states(1:2:end-2,:);  states(2:2:end-2,:);  states(end-1,:); states(end,:)];
-    a     = [moves(1:2:end-2,:);   moves(2:2:end-2,:);   moves(end-1,:);   moves(end,:)];
-    r     = [rewards(1:2:end-2,:); rewards(2:2:end-2,:);             -1; rewards(end,:)];
-    sNext = [states(3:2:end,:);    states(4:2:end,:);    NaN(1,n*n + 1); NaN(1,n*n + 1)];
-    aNext = [moves(3:2:end,:);     moves(4:2:end,:);     NaN(1,2);             NaN(1,2)];
+    ii = D.n + (1:size(ss,1));
+    D.s(ii,:)     = [ss(1:2:end-2,:); ss(2:2:end-2,:);  ss(end-1,:);    ss(end,:)];
+    D.a(ii,:)     = [as(1:2:end-2,:); as(2:2:end-2,:);  as(end-1,:);    as(end,:)];
+    D.r(ii,:)     = [rs(1:2:end-2,:); rs(2:2:end-2,:); -rs(end,:);      rs(end,:)];
+    D.sNext(ii,:) = [ss(3:2:end,:);   ss(4:2:end,:);    NaN(1,n*n + 1); NaN(1,n*n + 1)];
     
-    if D.n + size(states,1) < size(D.board,1)
-        ii = D.n + (1:size(s,1));
-        jj = 1:size(s,1);
-        D.n = D.n + numel(jj);
+    if D.n + numel(ii) < N
+        D.n = D.n + numel(ii);
     else
         % memory almost full:
-        ii = (D.n + 1):D.N;
-        jj = size(s,1) - numel(ii) + 1:size(s,1);
         D.n = 0;
     end
-    D.board(ii,:)       = s(jj,1:end-1);
-    D.player(ii)        = s(jj,end);
-    D.move(ii,:)        = a(jj,:);
-    D.reward(ii)        = r(jj);
-    D.boardNext(ii,:)   = sNext(jj,1:end-1);
-    D.moveNext(ii,:)    = aNext(jj,:);
     
     %% stochastic gradient descent
     
@@ -63,34 +60,58 @@ for kk = 1:100
         dLdw  = zeros(size(w));
         for i = 1:numel(ii)
             j = ii(i);
-            if D.reward(j) ~= 0
-                Qmax = D.reward(j);
+            s = D.s(j,:);
+            a = D.a(j,:);
+            r = D.r(j,:);
+            sNext = D.sNext(j,:);
+            
+            if isnan(sNext(1))
+                % we're looking at a final state
+                y = r;
             else
-                boardn = D.boardNext(j,:);
-                an = D.moveNext(j,:);
-                Qmax = w'*phi(reshape(boardn,13,13),an,D.player(j),f);
+                [~,y] = argmaxQ(sNext,f,w);
+%                 y = 0.9*y;
             end
-            board = reshape(D.board(j,:),13,13);
-            a = D.move(j,:);
-            phi_sa = phi(board,a,D.player(j),f);
-            dLdw = dLdw + (Qmax - w'*phi_sa)*phi_sa;
+            phi_sa = phi(s,a,f);
+            dLdw = dLdw + (y - w'*phi_sa)*phi_sa;
         end
         
         dLdw = dLdw / mini_batch_size;
-            
-        w = w + 0.1*dLdw;
+        adam.n = adam.n + 1;
+        
+        % ADAM:
+        adam.m = adam.b1*adam.m + (1-adam.b1)*dLdw;
+        adam.v = adam.b2*adam.v + (1 - adam.b2)*dLdw.^2;
+        mHat = adam.m / (1 - adam.b1^adam.n);
+        vHat = adam.v / (1 - adam.b2^adam.n);
+%         w = w - adam.a * mHat ./ (sqrt(vHat) + adam.eps);
+        w = w + 0.001 * mHat ./ (sqrt(vHat) + adam.eps);
+        
+        for mm = 1:max(f_group)
+           jj = f_group == mm;
+           w(jj) = mean(w(jj));
+        end
+        
+%         w = w + 0.2*dLdw;
         wAll(end+1,:) = w;
     end
     toc
+    
+    if mod(kk,5000) == 0
+        tnow = now;
+        save dump D w tnow
+    end
 end
 
 %% visualize:
 
-token = {'o','x'};
+token = {'o','*'};
 p = 1;
 figure; hold on; axis([1 13 1 13]); grid on; 
-for j = 1:size(moves,1)
-   plot(moves(j,1),moves(j,2),token{p+1});
+for j = 1:size(as,1)
+   plot(as(j,1),as(j,2),token{p+1});
+   
+   if isRandom(j), plot(as(j,1),as(j,2),['g' token{p+1}]); end
    
    drawnow;
    pause;

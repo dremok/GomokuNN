@@ -1,4 +1,4 @@
-function [f_all w_all] = getFeatures
+function [f_all w_all f_group] = getFeatures
 
 LR  = @fliplr;
 UD  = @flipud;
@@ -6,13 +6,14 @@ UD  = @flipud;
 % the features are encoded from the point of view of player == 1
 f_generators = {
 % "good for me":
-[1 1],        0.01
-[0 1 1 1 0],  0.1
-[1 1 1 1 0],  0.8
-[1 1 1 1 1],  1
+[0 1 1 0],     0.01
+[0 1 1 1 0],   0.1
+[0 1 1 1 1 0], 0.5
+[1 1 1 1 1],   1
 % "bad for me":
 [0 -1 -1 0],       -0.02
 [0 -1 -1 -1 0],    -0.7
+[0 -1 -1 -1 -1 0], -0.9
 [1 -1 -1 -1 -1 0], -0.7
 };
 
@@ -39,6 +40,7 @@ w            = [w; w_diag(:)];
     
 f_all = {};
 w_all = [];
+f_group = [];
 for n = 1:numel(f_generators)
     f = f_generators{n};
     
@@ -69,6 +71,19 @@ for n = 1:numel(f_generators)
         end
     end
     
-    f_all = [f_all; fsym(:)];
-    w_all = [w_all; w(n)*ones(numel(fsym),1)];
+    f_all   = [f_all; fsym(:)];
+    w_all   = [w_all; w(n)*ones(numel(fsym),1)];
+    f_group = [f_group; n*ones(numel(fsym),1)];
+end
+
+%% "encoded" version (i.e. ready for convolutions)
+
+for j = 1:size(f_all,1)
+    f_ = f_all{j} + 2;
+    [nx, ny] = size(f_);
+    if nx > 1, f_ = flipud(f_); end
+    if ny > 1, f_ = fliplr(f_); end
+    f_all{j,2} = 10.^f_.*(f_ ~= 4);
+    
+    f_all{j,3} = f_all{j,2}(:)'*f_(:);
 end

@@ -1,42 +1,47 @@
-function [states moves rewards] = rollOut(w,f,epsilon)
+function [ss as rs isRandom] = rollOut(w,f,epsilon)
 
 n = 13;
-board = zeros(n,n);
+b = zeros(n,n);
 
 is_over = 0;
-player  = 1;
+p = 1;
 
 % for recording the (s,a,r)-tuples:
-moves   = NaN(n*n,2);
-states  = NaN(n*n,n*n + 1);
-rewards = zeros(n*n,1);
+as = NaN(n*n,2);
+ss = NaN(n*n,n*n + 1);
+rs = zeros(n*n,1);
 
-nMoves = 0;
+% for visualisation:
+isRandom = zeros(n*n,1);
+
+m = 0;
 while ~is_over
-    if ~any(board(:) == 0)
-        winner  = 0; % draw
+    if ~any(b(:) == 0)
+        % draw
         break
     end
     
     % move:
-    move   = qAgent(board,player,w,f,epsilon);
-    nMoves = nMoves + 1;
-    states(nMoves,:) = [board(:)' player]; % s
-    moves(nMoves,:)  = move;               % a
-    
+    s = [b(:)' p];
+    [a isRand] = qAgent(s,w,f,epsilon);
+    m = m + 1;
+    ss(m,:) = s;
+    as(m,:) = a;
+    isRandom(m,:) = isRand;
+        
     % check win:
-    board(move(1),move(2)) = player;
-    isWin = checkWin(board,move);
+    b(a(1),a(2)) = p;
+    isWin = checkWin(b,a);
     
     if isWin
-        winner = player;
         is_over = 1;
-        rewards(nMoves) = 1; % r
+        rs(m) = 1; % r
     end
         
     % next player's turn
-    player = -player;
+    p = -p;
 end
-states  = states(1:nMoves,:);
-moves   = moves(1:nMoves,:);
-rewards = rewards(1:nMoves,:);
+ss = ss(1:m,:);
+as = as(1:m,:);
+rs = rs(1:m,:);
+isRandom = isRandom(1:m);
