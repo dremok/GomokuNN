@@ -4,11 +4,9 @@ function c = countpattern(b, p, f)
 % p: player 
 % f: features
 
-b = p*b + 2;
-c = zeros(size(f,1),1);
+c = NaN(size(f,1),1);
 for j = 1:size(f,1)
-    bw = conv2(b, f{j,2}, 'valid');
-    c(j) = sum(bw(:) == f{j,3});
+    c(j) = countpat(b*p,f{j});
 end
 
 %% Test it:

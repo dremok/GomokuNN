@@ -111,7 +111,7 @@ for kk = 1:100000
     
     if mod(kk,5000) == 0
         tnow = now;
-        save dump D w tnow
+        save dump D w tnow wAll LAll
     end
 end
 
