@@ -1,4 +1,4 @@
-function [ss as rs isRandom] = rollOut(w,f,epsilon)
+function [ss as rs isRandom phiAll] = rollOut(w,f,epsilon)
 
 n = 13;
 b = zeros(n,n);
@@ -10,6 +10,7 @@ p = 1;
 as = NaN(n*n,2);
 ss = NaN(n*n,n*n + 1);
 rs = zeros(n*n,1);
+phiAll = zeros(n*n,1+100*(numel(w)+2));
 
 % for visualisation:
 isRandom = zeros(n*n,1);
@@ -23,11 +24,12 @@ while ~is_over
     
     % move:
     s = [b(:)' p];
-    [a isRand] = qAgent(s,w,f,epsilon);
+    [a isRand phi_] = qAgent(s,w,f,epsilon);
     m = m + 1;
     ss(m,:) = s;
     as(m,:) = a;
     isRandom(m,:) = isRand;
+    phiAll(m,1:numel(phi_)) = phi_;
         
     % check win:
     b(a(1),a(2)) = p;
@@ -45,3 +47,4 @@ ss = ss(1:m,:);
 as = as(1:m,:);
 rs = rs(1:m,:);
 isRandom = isRandom(1:m);
+phiAll = phiAll(1:m,:);

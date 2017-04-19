@@ -15,32 +15,35 @@ adam.v   = zeros(size(w));
 
 %%
 
-wAll = w';
+wAll = [];
+LAll = [];
 
 % initialise experience memory: 
-N = 100000;
+N = 10000;
 clear D
-D.s      = NaN(N,n*n + 1);
-D.a      = NaN(N,2);
-D.r      = NaN(N,1);
-D.sNext  = NaN(N,n*n + 1);
-D.n      = 0;
-
+D.s       = NaN(N,n*n + 1);
+D.phi     = NaN(N,1+100*(numel(w)+2));
+D.a       = NaN(N,2);
+D.r       = NaN(N,1);
+D.sNext   = NaN(N,n*n + 1);
+D.phiNext = NaN(N,1+100*(numel(w)+2));
+D.n       = 0;
+D.m       = 0;
 %%
 
 for kk = 1:100000
     %% rollout
-    fprintf('Rollout %d ..'); tic
-    [ss as rs isRandom] = rollOut(w,f,epsilon);
-    toc
+    fprintf('Rollout %d ..'); tic; [ss as rs isRandom phiAll] = rollOut(w,f,epsilon); toc
     
     %% add experience to D
     
     ii = D.n + (1:size(ss,1));
     D.s(ii,:)     = [ss(1:2:end-2,:); ss(2:2:end-2,:);  ss(end-1,:);    ss(end,:)];
+    D.phi(ii,:)   = [phiAll(1:2:end-2,:); phiAll(2:2:end-2,:);  phiAll(end-1,:);    phiAll(end,:)];
     D.a(ii,:)     = [as(1:2:end-2,:); as(2:2:end-2,:);  as(end-1,:);    as(end,:)];
     D.r(ii,:)     = [rs(1:2:end-2,:); rs(2:2:end-2,:); -rs(end,:);      rs(end,:)];
     D.sNext(ii,:) = [ss(3:2:end,:);   ss(4:2:end,:);    NaN(1,n*n + 1); NaN(1,n*n + 1)];
+    D.phiNext(ii,:)   = [phiAll(3:2:end,:); phiAll(4:2:end,:);  NaN(1,size(phiAll,2));    NaN(1,size(phiAll,2))];
     
     if D.n + numel(ii) < N
         D.n = D.n + numel(ii);
@@ -48,6 +51,7 @@ for kk = 1:100000
         % memory almost full:
         D.n = 0;
     end
+    D.m = max(D.m,D.n);
     
     %% stochastic gradient descent
     
@@ -55,9 +59,10 @@ for kk = 1:100000
     fprintf('Minibatch '); tic
     for mb = 1:5
         fprintf('%d',mb)
-        ii = randi(D.n,mini_batch_size,1);
+        ii = randi(D.m,mini_batch_size,1);
         
         dLdw  = zeros(size(w));
+        L = 0;
         for i = 1:numel(ii)
             j = ii(i);
             s = D.s(j,:);
@@ -69,13 +74,19 @@ for kk = 1:100000
                 % we're looking at a final state
                 y = r;
             else
-                [~,y] = argmaxQ(sNext,f,w);
-%                 y = 0.9*y;
+                nActions = D.phiNext(j,1);
+                tmp = reshape(D.phiNext(j,1+(1:nActions*(2+numel(w)))),2+numel(w),nActions);
+                phi_ = tmp(3:end,:);
+                Q = w'*phi_;
+                k = find(Q == max(Q));
+                if numel(k) > 1, k = k(randi(numel(k),1,1)); end
+                y = Q(k);
             end
             phi_sa = phi(s,a,f);
             dLdw = dLdw + (y - w'*phi_sa)*phi_sa;
+            L    = L + (y - w'*phi_sa)^2;
         end
-        
+        L = -L / mini_batch_size;
         dLdw = dLdw / mini_batch_size;
         adam.n = adam.n + 1;
         
@@ -94,6 +105,7 @@ for kk = 1:100000
         
 %         w = w + 0.2*dLdw;
         wAll(end+1,:) = w;
+        LAll(end + 1) = L;
     end
     toc
     

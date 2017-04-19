@@ -1,4 +1,4 @@
-function [a Qa] = argmaxQ(s,f,w)
+function [a Qa phia as] = argmaxQ(s,f,w)
 
 % s -> b
 n = sqrt(numel(s)-1);
@@ -12,13 +12,14 @@ as = [i j];
 
 % get Q(s,a) for all possible a
 nActions = size(as,1);
-Q = zeros(nActions,1);
+phia = zeros(numel(w),nActions);
 for j = 1:nActions
-    Q(j) = w'*phi(s,as(j,:),f);
+    phia(:,j) = phi(s,as(j,:),f);
 end
+Q = w'*phia;
 
 % find the best action (choose randomly among equally good ones):
 k = find(Q == max(Q));
 if numel(k) > 1, k = k(randi(numel(k),1,1)); end
 a = as(k,:);
-Qa = Q(k,:);
+Qa = Q(k);
