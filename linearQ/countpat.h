@@ -1,0 +1,1 @@
+void countpat(int * out, int * x, int * f, int x1, int x2, int f1, int f2);
