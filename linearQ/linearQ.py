@@ -10,19 +10,19 @@ import random
 
 def getFeatures():
 
-    f_gen = list();
-    f_gen.append(np.array([[0,1,1,0]], dtype=np.int))
-    f_gen.append(np.array([[0,1,1,1,0]], dtype=np.int))
-    f_gen.append(np.array([[0,1,1,1,1,0]], dtype=np.int))
-    f_gen.append(np.array([[0,1,0,1,1,0]], dtype=np.int))
-    f_gen.append(np.array([[1,1,1,1,1]], dtype=np.int))
-    f_gen.append(np.array([[0,-1,-1,0]], dtype=np.int))
-    f_gen.append(np.array([[0,-1,-1,-1,0]], dtype=np.int))
-    f_gen.append(np.array([[0,-1,-1,-1,-1,0]], dtype=np.int))
-    f_gen.append(np.array([[0,-1,-1,0,-1,0]], dtype=np.int))
-    f_gen.append(np.array([[-1,-1,0,-1,-1]], dtype=np.int))
-    f_gen.append(np.array([[-1,-1,-1,0,-1]], dtype=np.int))
-    f_gen.append(np.array([[1,-1,-1,-1,-1,0]], dtype=np.int))
+    f_gen = [[0,1,1,0],
+    [0,1,1,1,0],
+    [0,1,1,1,1,0],
+    [0,1,0,1,1,0],
+    [1,1,1,1,1],
+    [0,-1,-1,0],
+    [0,-1,-1,-1,0],
+    [0,-1,-1,-1,-1,0],
+    [0,-1,-1,0,-1,0],
+    [-1,-1,0,-1,-1],
+    [-1,-1,-1,0,-1],
+    [1,-1,-1,-1,-1,0]]    
+    f_gen = [np.array([x],dtype = np.int) for x in f_gen]
     
     w = np.array([0.1360,0.2662,0.9232,0.1967,1.5843,-0.1594,-0.6747,-1.3054,-1.3054,-0.7254,-0.5805,-1.1453])
     
