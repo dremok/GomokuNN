@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-#import matplotlib
-#import matplotlib.pyplot as plt
-#import matplotlib.animation as animation
+import matplotlib.pyplot as plt
 from scipy.signal import convolve2d
 import countpat
 import random
-import timeit
 
 #%%
 
@@ -18,10 +15,13 @@ def getFeatures():
     f_gen.append(np.array([[0,1,1,1,0]], dtype=np.int))
     f_gen.append(np.array([[0,1,1,1,1,0]], dtype=np.int))
     f_gen.append(np.array([[0,1,0,1,1,0]], dtype=np.int))
+    f_gen.append(np.array([[1,1,1,1,1]], dtype=np.int))
     f_gen.append(np.array([[0,-1,-1,0]], dtype=np.int))
+    f_gen.append(np.array([[0,-1,-1,-1,0]], dtype=np.int))
     f_gen.append(np.array([[0,-1,-1,-1,-1,0]], dtype=np.int))
     f_gen.append(np.array([[0,-1,-1,0,-1,0]], dtype=np.int))
     f_gen.append(np.array([[-1,-1,0,-1,-1]], dtype=np.int))
+    f_gen.append(np.array([[-1,-1,-1,0,-1]], dtype=np.int))
     f_gen.append(np.array([[1,-1,-1,-1,-1,0]], dtype=np.int))
     
     w = np.array([0.1360,0.2662,0.9232,0.1967,1.5843,-0.1594,-0.6747,-1.3054,-1.3054,-0.7254,-0.5805,-1.1453])
@@ -104,7 +104,7 @@ def countpattern(b,p,f):
     c = np.zeros(np.max(f['group'])+1,dtype = np.int)
     for j in range(0,len(f['pattern'])):
         countpat.countpat_func(c_, b_, f['pattern'][j])
-        c[f['group']] += c_[0]
+        c[f['group'][j]] += c_[0]
     return c
    
 def phi(s,a,f):
@@ -134,8 +134,13 @@ def argmaxQ(s,f,w):
     # calculate Q(s,a) for all possible actions: 
     Q = phi_a @ w;
     
-    # find the best action (NB: for ties, first one will be chosen)
-    k = np.argmax(Q)
+    # find the best action (ties resolved randomly)
+    m = np.max(Q)
+    ii = np.where(Q > m - 1e-6)[0]
+    if len(ii) > 1:
+        k = ii[random.sample(range(0,len(ii)),1)[0]]
+    else:
+        k = ii[0]
     a_opt = a[k]
     Q_opt = Q[k]
     return (a_opt, Q_opt, a, phi_a)   
@@ -247,13 +252,30 @@ class experience:
         self.add(( game_record[-2][0],  # s
                    game_record[-2][1],  # a
                   -game_record[-1][2],  # r (-1 times winner's reward)
-                   None,None,None))     # None here because final state
+                   None,None,None))     # "None" here because final state
         # last state transition for winner:
         self.add((game_record[-1][0],  # s
                   game_record[-1][1],  # a
                   game_record[-1][2],  # r
-                  None,None,None))     # None here because final state
-        
+                  None,None,None))     # "None" here because final state
+
+class adamClass:
+    a   = 0.001
+    b1  = 0.9
+    b2  = 0.999
+    eps = 1e-8
+    n   = 0
+    def __init__(self,w):
+        self.m = np.zeros_like(w)
+        self.v = np.zeros_like(w)
+    def update(self,w):
+        adam.n = adam.n + 1
+        adam.m = adam.b1*adam.m + (1-adam.b1)*dLdw
+        adam.v = adam.b2*adam.v + (1 - adam.b2)*np.power(dLdw,2)
+        mHat = adam.m / (1 - adam.b1**adam.n)
+        vHat = adam.v / (1 - adam.b2**adam.n)
+        return (w + adam.a * mHat / (np.sqrt(vHat) + adam.eps))
+                  
 #%%
 
 mini_batch_size = 50
@@ -261,42 +283,31 @@ epsilon = 0.1;
 
 # features, initial weights:
 f,w = getFeatures()
+# w = np.array([ 0.15881415,  0.20494743,  0.60102403,  0.09290497,  0.96104338,       -0.01478161, -0.62512229, -1.13322032, -0.54985369, -0.89275337,       -1.13227525, -1.18833344,  0.17363202,  0.22542401,  0.54344071,        0.06310447,  0.94988106, -0.01218425, -0.49280391, -1.19674693,       -0.40013123, -0.8735151 , -1.67728488, -1.13100639])
 
 # adam:
-adam = {'a': 0.001,
-        'b1': 0.9,
-        'b2': 0.999,
-        'eps': 1e-8,
-        'n': 0,
-        'm': np.empty_like(w),
-        'v': np.empty_like(w)}
+adam = adamClass(w)
 
 # initialise experience:
 D = experience()
-for kk in range(0,10):
-    print(kk+1)
+while D.m < mini_batch_size:
     game_record = roll_out(w,f,epsilon)
     D.store_game(game_record)
 
-wAll = list()
-LAll = list()
+wAll  = list()
+LAll  = list()
     
-#%%
+#%% 
 
 # start learning:
-for _ in range(0,1000):
+for kk in range(0,3000):    
     # play a game:
-    print('play a game:')
-    tic = timeit.default_timer()
-    game_record = roll_out(w,f,0.1)
-    print(timeit.default_timer() - tic)
+    game_record = roll_out(w,f,epsilon)
     
     # add it to experience:
     D.store_game(game_record)
     
     # stochastic gradient descent
-    print('gradient descent:')
-    tic = timeit.default_timer()
     for _ in range(0,5):
         # mini-batch:
         L    = 0                # loss
@@ -317,13 +328,26 @@ for _ in range(0,1000):
         dLdw = dLdw / mini_batch_size
             
         # adam step:
-        adam['n'] = adam['n'] + 1
-        adam['m'] = adam['b1']*adam['m'] + (1-adam['b1'])*dLdw
-        adam['v'] = adam['b2']*adam['v'] + (1 - adam['b2'])*np.power(dLdw,2)
-        mHat = adam['m'] / (1 - adam['b1']**adam['n'])
-        vHat = adam['v'] / (1 - adam['b2']**adam['n'])
-        w = w + 0.001 * mHat / (np.sqrt(vHat) + adam['eps'])
+        w = adam.update(w)
         
         wAll.append(np.array(w))
         LAll.append(L)
-    print(timeit.default_timer() - tic)
+    if kk%10 == 0:
+        print(kk)
+    
+#%%
+
+w_ = np.empty((len(wAll),len(w)))
+L_ = np.empty((len(LAll),))
+
+for j in range(0,len(wAll)):
+    w_[j][:] = wAll[j]
+    L_[j] = LAll[j]
+
+plt.figure(1)
+plt.clf()
+plt.subplot(121)
+plt.plot(w_)
+plt.subplot(122)
+plt.plot(L_)
+
